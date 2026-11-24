@@ -1,0 +1,24 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import stat, txn_table with context %}
+{% block title %}Earnings{% endblock %}
+{% block content %}
+<h4 class="mb-3">Earnings &amp; Transactions</h4>
+<div class="row g-3 mb-3">
+  {{ stat('bi-arrow-down-circle', 'Sales received', t.cr|inr) }}
+  {{ stat('bi-arrow-up-circle', 'Paid to households', t.db|inr, 'warn') }}
+  {{ stat('bi-wallet2', 'Net earnings', (t.cr - t.db)|inr) }}
+</div>
+{% if monthly %}<div class="eco-card mb-3"><h6 class="fw-bold">Monthly cash flow</h6><div class="chart-box"><canvas id="c"></canvas></div></div>{% endif %}
+<div class="eco-card"><h6 class="fw-bold">Transactions</h6>{{ txn_table(txns) }}</div>
+{% endblock %}
+{% block scripts %}
+{% if monthly %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const d = {{ monthly|tojson }};
+new Chart(document.getElementById('c'), {type: 'bar', data: {labels: d.map(x => x.m), datasets: [
+  {label: 'Received', data: d.map(x => x.cr), backgroundColor: '#1f6b3a'}, {label: 'Paid out', data: d.map(x => x.db), backgroundColor: '#f4a300'}]},
+  options: {maintainAspectRatio: false}});
+</script>
+{% endif %}
+{% endblock %}

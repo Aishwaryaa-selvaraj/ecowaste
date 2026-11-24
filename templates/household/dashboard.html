@@ -1,0 +1,34 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import stat, badge with context %}
+{% block title %}Household Dashboard{% endblock %}
+{% block content %}
+<h4 class="mb-3">Welcome, {{ session.name }} 👋</h4>
+<div class="row g-3 mb-3">
+  {{ stat('bi-recycle', 'Total waste collected', '%.1f kg'|format(kg)) }}
+  {{ stat('bi-cash-coin', 'Total earnings', earn|inr, 'warn') }}
+  {{ stat('bi-hourglass-split', 'Pending pickups', s.pending|int) }}
+  {{ stat('bi-check2-circle', 'Completed pickups', s.completed|int) }}
+</div>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="eco-card"><h6 class="fw-bold">Recycling statistics (kg by material)</h6>
+    {% if bycat %}<div class="chart-box"><canvas id="cat"></canvas></div>{% else %}<div class="empty-state"><i class="bi bi-pie-chart"></i><div>No collected waste yet. <a href="{{ url_for('household.book') }}">Book your first pickup</a>.</div></div>{% endif %}</div></div>
+  <div class="col-lg-7"><div class="eco-card"><div class="d-flex justify-content-between"><h6 class="fw-bold">Recent activity</h6><a class="small" href="{{ url_for('household.history') }}">View all</a></div>
+    <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Materials</th><th>Date</th><th>Status</th></tr></thead><tbody>
+    {% for r in recent %}<tr><td>{{ r.id }}</td><td>{{ r.materials|truncate(40) }}</td><td>{{ r.pickup_date|fdate }}</td><td>{{ badge(r.status) }}</td></tr>
+    {% else %}<tr><td colspan="4"><div class="empty-state"><i class="bi bi-inbox"></i><div>No pickups yet.</div></div></td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-12"><div class="eco-card"><h6 class="fw-bold">Notifications</h6>
+    {% for n in notes %}<div class="py-1 border-bottom small">{{ n.message }} <span class="text-muted">· {{ n.created_at|fdt }}</span></div>
+    {% else %}<p class="text-muted mb-0">Nothing new.</p>{% endfor %}</div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if bycat %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const d = {{ bycat|tojson }};
+new Chart(document.getElementById('cat'), {type: 'doughnut',
+  data: {labels: d.map(x => x.name), datasets: [{data: d.map(x => x.kg), backgroundColor: ['#1f6b3a','#7bc47f','#f4a300','#2f8f50','#c7e6c9','#e29500','#14502a','#9fd6a3']}]},
+  options: {maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}});
+</script>
+{% endif %}
+{% endblock %}

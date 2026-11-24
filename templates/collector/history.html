@@ -1,0 +1,17 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import badge, items_table with context %}
+{% block title %}Collection History{% endblock %}
+{% block content %}
+<div class="page-head"><h4>Collection History</h4><p>Requests you have collected and delivered, with the recorded weights and values.</p></div>
+<div class="row g-3">
+  {% for r in rows %}
+  <div class="col-xl-6"><div class="eco-card">
+    <div class="d-flex justify-content-between flex-wrap gap-1"><b>#{{ r.id }} · {{ r.household }}</b>{{ badge(r.status) }}</div>
+    <div class="small text-muted mb-1">{{ r.pickup_date|fdate }} · {{ r.address }}</div>
+    <div class="small mb-2">Delivered to <b>{{ r.recycler or '-' }}</b>{% if r.delivered_at %} on {{ r.delivered_at|fdt }}{% endif %}
+      {% if r.status == 'delivered' %}· <span class="text-muted">{{ STAGE_LABELS[r.recycling_stage] }}</span>{% endif %}</div>
+    {{ items_table(r['items'], r) }}
+  </div></div>
+  {% else %}<div class="col-12"><div class="eco-card empty-state"><i class="bi bi-clock-history"></i><div>No delivered pickups yet.</div></div></div>{% endfor %}
+</div>
+{% endblock %}

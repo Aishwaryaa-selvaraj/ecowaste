@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<div class="container py-4 auth-wrap" style="max-width:600px">
+  <div class="eco-card w-100">
+    <div class="auth-logo"><i class="bi bi-person-plus"></i></div>
+    <h4 class="fw-bold mb-1 text-center">Create your account</h4><p class="text-center text-muted small mb-3">Choose your role first - the form adapts to it.</p>
+    <form method="post" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-label">I am a</label>
+      <select class="form-select mb-3" name="role" id="role" required>
+        {% for v, l in [('household','Household / User'),('collector','Waste Collector'),('recycler','Recycler')] %}
+        <option value="{{ v }}" {{ 'selected' if form.get('role') == v }}>{{ l }}</option>{% endfor %}
+      </select>
+      <div class="row g-3">
+        <div class="col-12"><label class="form-label">Full name</label><input class="form-control" name="name" value="{{ form.get('name','') }}" required></div>
+        <div class="col-md-6"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="{{ form.get('email','') }}" required></div>
+        <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" type="tel" name="phone" value="{{ form.get('phone','') }}" placeholder="10-digit number" required></div>
+        <div class="col-md-6"><label class="form-label">Password</label><input class="form-control" type="password" name="password" autocomplete="new-password" required></div>
+        <div class="col-md-6"><label class="form-label">Confirm password</label><input class="form-control" type="password" name="confirm" autocomplete="new-password" required></div>
+        <div class="col-12 role-f" data-r="household recycler"><label class="form-label">Address <span class="text-muted">(include PIN code)</span></label><textarea class="form-control" name="address" rows="2">{{ form.get('address','') }}</textarea></div>
+        <div class="col-md-6 role-f" data-r="collector"><label class="form-label">Vehicle</label><input class="form-control" name="vehicle" value="{{ form.get('vehicle','') }}" placeholder="e.g. Mini truck"></div>
+        <div class="col-md-6 role-f" data-r="collector"><label class="form-label">Service area</label><input class="form-control" name="area" value="{{ form.get('area','') }}"></div>
+        <div class="col-12 role-f" data-r="recycler"><label class="form-label">Company name</label><input class="form-control" name="company" value="{{ form.get('company','') }}"></div>
+      </div>
+      <p class="small text-muted mt-2">Password: 8+ characters with letters and numbers.</p>
+      <button class="btn btn-eco w-100">Register</button>
+    </form>
+    <p class="text-center small mt-3 mb-0">Already registered? <a href="{{ url_for('auth.login') }}">Login</a></p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const sel = document.getElementById('role');
+function showFields() {
+  document.querySelectorAll('.role-f').forEach(el => {
+    const on = el.dataset.r.split(' ').includes(sel.value);
+    el.style.display = on ? '' : 'none';
+    el.querySelectorAll('input,textarea').forEach(i => i.disabled = !on);
+  });
+}
+sel.addEventListener('change', showFields); showFields();
+</script>
+{% endblock %}

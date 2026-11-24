@@ -1,0 +1,19 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import badge with context %}
+{% block title %}Purchase Requests{% endblock %}
+{% block content %}
+<h4 class="mb-3">Purchase Requests from Recyclers</h4>
+<div class="eco-card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>#</th><th>Recycler</th><th>Material</th><th class="text-end">Qty (kg)</th><th class="text-end">Offer ₹/kg</th><th class="text-end">Total</th><th>Status</th><th>Action</th></tr></thead><tbody>
+  {% for o in rows %}
+  <tr><td>{{ o.id }}</td><td>{{ o.company }}<div class="small"><a href="tel:{{ o.phone }}">{{ o.phone }}</a> · <a href="mailto:{{ o.email }}">{{ o.email }}</a></div></td>
+    <td>{{ o.category }}</td><td class="text-end">{{ '%g'|format(o.quantity_kg) }}</td><td class="text-end">{{ '%g'|format(o.offer_price_per_kg) }}</td>
+    <td class="text-end fw-semibold">{{ o.total|inr }}</td><td>{{ badge(o.status) }}</td>
+    <td class="text-nowrap">
+      {% set acts = {'requested': [('accept','btn-eco','Accept'),('reject','btn-outline-danger','Reject')], 'accepted': [('complete','btn-accent','Delivered &amp; paid')]}.get(o.status, []) %}
+      {% for act, cls, label in acts %}
+      <form method="post" action="{{ url_for('collector.order_action', oid=o.id, action=act) }}" class="d-inline"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-sm {{ cls }}">{{ label|safe }}</button></form>{% endfor %}</td></tr>
+  {% else %}<tr><td colspan="8" class="text-center text-muted py-4">No purchase requests yet. List stock to receive offers.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import txn_table with context %}
+{% block title %}Transactions{% endblock %}
+{% block content %}
+<h4 class="mb-3">Transaction History</h4>
+<div class="eco-card">{{ txn_table(txns) }}</div>
+{% endblock %}

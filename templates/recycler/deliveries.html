@@ -1,0 +1,33 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import badge with context %}
+{% block title %}Deliveries{% endblock %}
+{% macro delivery_card(r, with_action) %}
+<div class="col-xl-6"><div class="eco-card">
+  <div class="d-flex justify-content-between flex-wrap gap-1"><b>Request #{{ r.id }}</b>
+    {% if r.status == 'completed' %}{{ badge('completed') }}{% else %}<span class="badge st-delivered">{{ STAGE_LABELS[r.recycling_stage] }}</span>{% endif %}</div>
+  <div class="small text-muted mb-2">Delivered {{ r.delivered_at|fdt }} by <b>{{ r.collector }}</b> · {{ r.vehicle }} · <a href="tel:{{ r.cphone }}">{{ r.cphone }}</a></div>
+  <div class="table-responsive"><table class="table table-sm items-table mb-0">
+    <thead><tr><th>Material</th><th class="text-end">Weight received</th></tr></thead>
+    <tbody>{% for i in r['items'] %}<tr><td>{{ i.name }}</td><td class="text-end">{{ '%g'|format(i.actual_weight if i.actual_weight is not none else 0) }} kg</td></tr>{% endfor %}</tbody>
+    <tfoot><tr class="fw-bold"><td>Total quantity</td><td class="text-end">{{ '%g'|format(r.final_weight or 0) }} kg</td></tr></tfoot></table></div>
+  {% if with_action %}
+  <form method="post" action="{{ url_for('recycler.progress', rid=r.id) }}" class="mt-3"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if r.recycling_stage is none %}<button class="btn btn-eco w-100"><i class="bi bi-box-seam"></i> Confirm waste received</button>
+    {% elif r.recycling_stage == 'received' %}<button class="btn btn-eco w-100"><i class="bi bi-arrow-repeat"></i> Start recycling</button>
+    {% else %}<button class="btn btn-accent w-100"><i class="bi bi-check2-circle"></i> Mark process completed</button>{% endif %}
+  </form>{% endif %}
+</div></div>
+{% endmacro %}
+{% block content %}
+<div class="page-head"><h4>Delivered Waste</h4><p>Waste brought to you by collectors. Update the recycling progress as you go.</p></div>
+<h6 class="fw-bold mb-2">In progress <span class="badge st-delivered ms-1">{{ active|length }}</span></h6>
+<div class="row g-3 mb-4">
+  {% for r in active %}{{ delivery_card(r, True) }}
+  {% else %}<div class="col-12"><div class="eco-card empty-state"><i class="bi bi-box-seam"></i><div>No deliveries waiting. New ones appear here when a collector delivers waste to you.</div></div></div>{% endfor %}
+</div>
+<h6 class="fw-bold mb-2">Recycling records <span class="badge st-completed ms-1">{{ done|length }}</span></h6>
+<div class="row g-3">
+  {% for r in done %}{{ delivery_card(r, False) }}
+  {% else %}<div class="col-12"><div class="eco-card empty-state"><i class="bi bi-recycle"></i><div>Completed recycling records will be listed here.</div></div></div>{% endfor %}
+</div>
+{% endblock %}

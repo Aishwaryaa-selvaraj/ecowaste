@@ -1,0 +1,23 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import material_picker %}
+{% block title %}Value Estimator{% endblock %}
+{% block content %}
+<div class="page-head"><h4>Smart Waste Value Estimator</h4><p>Add as many materials as you like. Each one is valued separately (weight × price per kg) and the total is added up for you.</p></div>
+<div class="row g-3">
+  <div class="col-xl-9"><div class="eco-card">{{ material_picker() }}</div></div>
+  <div class="col-xl-3"><div class="eco-card d-flex flex-column justify-content-center text-center">
+    <p class="small text-muted">Happy with the estimate? Your materials and weights carry over to the booking form.</p>
+    <a class="btn btn-eco" id="book" href="{{ url_for('household.book') }}"><i class="bi bi-calendar-plus"></i> Book a pickup</a>
+  </div></div>
+</div>
+<p class="small text-muted mt-3">Prices come from the latest entry in the price table. The final value is fixed by the collector's actual weighing.</p>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/materials.js') }}"></script>
+<script>
+const picker = initPicker({{ cats|tojson }}, [], 500);
+const link = document.getElementById('book');
+link.addEventListener('click', e => { e.preventDefault(); const s = picker.selection();
+  location = "{{ url_for('household.book') }}" + (s ? '?items=' + encodeURIComponent(s) : ''); });
+</script>
+{% endblock %}

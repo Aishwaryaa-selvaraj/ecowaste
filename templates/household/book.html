@@ -1,0 +1,84 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import material_picker %}
+{% block title %}Book Pickup{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
+{% block content %}
+<div class="page-head"><h4>Book Waste Pickup</h4><p>Choose every material you want collected, enter its weight and confirm where we should pick it up.</p></div>
+<form method="post" id="bookForm" class="row g-3" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="lat" id="lat" value="{{ form.get('lat','') }}"><input type="hidden" name="lng" id="lng" value="{{ form.get('lng','') }}">
+  <div class="col-xl-7"><div class="eco-card">
+    <h6 class="fw-bold mb-3"><span class="num">1</span> Waste materials &amp; weights</h6>
+    {{ material_picker() }}
+  </div></div>
+  <div class="col-xl-5"><div class="eco-card">
+    <h6 class="fw-bold mb-3"><span class="num">2</span> Pickup address &amp; time</h6>
+    <label class="form-label" for="address">Pickup address</label>
+    <textarea class="form-control mb-1" id="address" name="address" rows="3" maxlength="150" required
+      placeholder="House / flat no., street, area, city">{{ form.get('address','') }}</textarea>
+    <div class="form-text mb-3">The collector sees this exactly as you type it, so include the door number and street.</div>
+    <div class="row g-2 mb-3">
+      <div class="col-5"><label class="form-label" for="pincode">PIN code</label>
+        <input class="form-control" id="pincode" name="pincode" inputmode="numeric" maxlength="6" pattern="[1-9][0-9]{5}" value="{{ form.get('pincode','') }}" required></div>
+      <div class="col-7"><label class="form-label" for="landmark">Landmark <span class="text-muted">(optional)</span></label>
+        <input class="form-control" id="landmark" name="landmark" maxlength="60" value="{{ form.get('landmark','') }}" placeholder="e.g. near the temple"></div>
+    </div>
+    <div class="row g-2 mb-3">
+      <div class="col-6"><label class="form-label" for="date">Pickup date</label><input class="form-control" type="date" name="date" id="date" value="{{ form.get('date','') }}" required></div>
+      <div class="col-6"><label class="form-label" for="time">Pickup time</label><input class="form-control" type="time" name="time" id="time" value="{{ form.get('time','') }}" required></div>
+    </div>
+    <details class="map-pin mb-3" id="mapBox"><summary><i class="bi bi-geo-alt"></i> Add a map pin <span class="text-muted">(optional - helps the collector navigate)</span></summary>
+      <div class="pt-2"><button type="button" class="btn btn-outline-eco btn-sm mb-2" id="loc"><i class="bi bi-crosshair"></i> Use my location</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-2 d-none" id="clearPin">Clear pin</button>
+        <div class="small text-muted mb-2" id="pinNote">Or tap the map where your house is.</div><div id="map"></div></div></details>
+    <button class="btn btn-eco w-100"><i class="bi bi-check2-circle"></i> Submit pickup request</button>
+  </div></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/materials.js') }}"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const picker = initPicker({{ cats|tojson }}, {{ rows|tojson }}, 500);
+document.getElementById('date').min = new Date().toISOString().slice(0, 10);
+document.getElementById('bookForm').addEventListener('submit', e => {
+  const pin = document.getElementById('pincode');
+  if (!picker.validate() || !/^[1-9][0-9]{5}$/.test(pin.value.trim()) || document.getElementById('address').value.trim().length < 8) {
+    e.preventDefault();
+    if (document.getElementById('matMsg').classList.contains('d-none'))
+      document.getElementById('matMsg').textContent = 'Enter your full address and a valid 6-digit PIN code.', document.getElementById('matMsg').classList.remove('d-none');
+    document.getElementById('picker').scrollIntoView({behavior: 'smooth', block: 'center'});
+  }
+});
+// Optional map pin. The map is created only when the panel is opened (a Leaflet map built inside a hidden box has no size).
+const la0 = parseFloat(document.getElementById('lat').value), lo0 = parseFloat(document.getElementById('lng').value);
+let map, mk;
+const note = document.getElementById('pinNote'), clearBtn = document.getElementById('clearPin');
+function setPin(a, b, zoom) {
+  if (!map) return;
+  if (mk) mk.setLatLng([a, b]); else mk = L.marker([a, b]).addTo(map);
+  document.getElementById('lat').value = a.toFixed(6); document.getElementById('lng').value = b.toFixed(6);
+  note.textContent = 'Pin saved with your request: ' + a.toFixed(5) + ', ' + b.toFixed(5); clearBtn.classList.remove('d-none');
+  if (zoom) map.setView([a, b], 16);
+}
+function openMap() {
+  if (map) { map.invalidateSize(); return; }
+  if (typeof L === 'undefined') { document.getElementById('map').innerHTML = '<div class="p-3 text-muted">The map could not load. Your written address is all we need to book.</div>'; return; }
+  map = L.map('map').setView([10.9, 78.4], 7);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 18, attribution: '© OpenStreetMap contributors'}).addTo(map);
+  map.on('click', e => setPin(e.latlng.lat, e.latlng.lng));
+  if (!isNaN(la0) && !isNaN(lo0)) setPin(la0, lo0, true);
+}
+document.getElementById('mapBox').addEventListener('toggle', e => { if (e.target.open) openMap(); });
+if (!isNaN(la0) && !isNaN(lo0)) document.getElementById('mapBox').open = true;
+document.getElementById('loc').onclick = () => {
+  if (!navigator.geolocation) { note.textContent = 'This browser cannot share a location. Tap the map instead.'; return; }
+  note.textContent = 'Finding your location...';
+  navigator.geolocation.getCurrentPosition(p => setPin(p.coords.latitude, p.coords.longitude, true), err => {
+    note.textContent = err.code === 1 ? 'Location permission was denied. Tap the map instead, or just use the written address.'
+      : (!window.isSecureContext ? 'Your browser only shares location on secure (https) pages. Tap the map instead.' : 'Could not read your location. Tap the map instead.');
+  }, {enableHighAccuracy: true, timeout: 15000});
+};
+clearBtn.onclick = () => { if (mk) { mk.remove(); mk = null; } document.getElementById('lat').value = document.getElementById('lng').value = ''; clearBtn.classList.add('d-none'); note.textContent = 'Pin removed. Tap the map to add one again.'; };
+</script>
+{% endblock %}

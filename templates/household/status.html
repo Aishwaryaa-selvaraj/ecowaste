@@ -1,0 +1,38 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import badge, stepper, items_table with context %}
+{% block title %}Request Status{% endblock %}
+{% block content %}
+<div class="page-head"><h4>Request Status</h4><p>The latest stage of each of your collection requests.</p></div>
+{% if not req %}
+  <div class="eco-card empty-state"><i class="bi bi-inbox"></i><div>You have not booked a pickup yet.</div><a class="btn btn-eco mt-3" href="{{ url_for('household.book') }}">Book a pickup</a></div>
+{% else %}
+  {% if reqs|length > 1 %}
+  <select class="form-select mb-3" style="max-width:420px" onchange="location='?id='+this.value" aria-label="Choose a request">
+    {% for a in reqs %}<option value="{{ a.id }}" {{ 'selected' if a.id == req.id }}>#{{ a.id }} · {{ a.materials|truncate(34) }} · {{ STATUS_LABELS[a.status] }}</option>{% endfor %}</select>
+  {% endif %}
+  <div class="row g-3">
+    <div class="col-lg-6"><div class="eco-card">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2"><h6 class="fw-bold mb-0">Pickup #{{ req.id }}</h6>{{ badge(req.status) }}</div>
+      {% if req.status == 'cancelled' %}<p class="text-muted my-3">This request was cancelled.</p>{% else %}{{ stepper(req.status) }}{% endif %}
+      {% if req.status == 'delivered' %}<div class="alert alert-info py-2 small">Recycler progress: <b>{{ STAGE_LABELS[req.recycling_stage] }}</b></div>{% endif %}
+      <dl class="detail">
+        <dt>Pickup</dt><dd>{{ req.pickup_date|fdate }} at {{ req.pickup_time|ftime }}</dd>
+        <dt>Pickup address</dt><dd>{{ req.address }}</dd>
+        <dt>Collector</dt><dd>{% if req.collector %}{{ req.collector.name }} · {{ req.collector.vehicle }} · <a href="tel:{{ req.collector.phone }}">{{ req.collector.phone }}</a>{% else %}<span class="text-muted">Waiting for a collector to accept...</span>{% endif %}</dd>
+        {% if req.recycler %}<dt>Delivered to</dt><dd>{{ req.recycler.company }}{% if req.delivered_at %} on {{ req.delivered_at|fdt }}{% endif %}</dd>{% endif %}
+      </dl>
+      <div class="d-flex flex-wrap gap-2">
+        {% if req.status in ['collected','delivered','completed'] %}<a class="btn btn-outline-eco btn-sm" href="{{ url_for('household.receipt', rid=req.id) }}"><i class="bi bi-receipt"></i> Receipt</a>{% endif %}
+        {% if req.status == 'pending' %}
+        <form method="post" action="{{ url_for('household.cancel', rid=req.id) }}" onsubmit="return confirm('Cancel this pickup?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-outline-danger btn-sm">Cancel pickup</button></form>{% endif %}
+      </div>
+    </div></div>
+    <div class="col-lg-6"><div class="eco-card">
+      <h6 class="fw-bold">{{ 'Final breakdown' if req.final_value is not none else 'Estimated breakdown' }}</h6>
+      {{ items_table(req['items'], req) }}
+      <p class="small text-muted mt-2 mb-0">{% if req.final_value is not none %}Actual weights are measured by the collector; values use the price per kg applied at weighing.{% else %}Estimate only. The collector's actual weighing sets the final value.{% endif %}</p>
+    </div></div>
+  </div>
+{% endif %}
+{% endblock %}

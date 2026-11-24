@@ -1,0 +1,37 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import stat, txn_table with context %}
+{% block title %}Recycler Dashboard{% endblock %}
+{% block content %}
+<h4 class="mb-3">Welcome, {{ prof.company }}</h4>
+<div class="row g-3 mb-3">
+  {{ stat('bi-box-seam', 'Awaiting your confirmation', d.awaiting|int, 'warn') }}
+  {{ stat('bi-arrow-repeat', 'Recycling in progress', d.active|int) }}
+  {{ stat('bi-check2-circle', 'Process completed', d.completed|int) }}
+  {{ stat('bi-recycle', 'Total waste received', '%.1f kg'|format(d.kg)) }}
+</div>
+<p class="mb-2"><a class="btn btn-eco btn-sm" href="{{ url_for('recycler.deliveries') }}"><i class="bi bi-box-seam"></i> View deliveries</a></p>
+<div class="row g-3 mb-3">
+  {{ stat('bi-boxes', 'Materials available', '%.1f kg'|format(total_kg)) }}
+  {{ stat('bi-hourglass-split', 'Purchase requests', (o.requested + o.accepted)|int, 'warn') }}
+  {{ stat('bi-check2-circle', 'Completed purchases', o.completed|int) }}
+  {{ stat('bi-cash-coin', 'Total spent', o.spent|inr) }}
+</div>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="eco-card"><h6 class="fw-bold">Available by category (kg)</h6>
+    {% if stock %}<div class="chart-box"><canvas id="c"></canvas></div>{% else %}<p class="text-muted text-center my-4">Nothing listed yet.</p>{% endif %}
+    <a class="btn btn-eco mt-2" href="{{ url_for('recycler.market') }}">Browse marketplace</a></div></div>
+  <div class="col-lg-7">
+    <div class="eco-card mb-3"><h6 class="fw-bold">Profile</h6><div class="small">{{ prof.name }} · {{ prof.email }} · {{ prof.phone }}<br>{{ prof.address }}</div></div>
+    <div class="eco-card"><h6 class="fw-bold">Recent transactions</h6>{{ txn_table(txns) }}</div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if stock %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const d = {{ stock|tojson }};
+new Chart(document.getElementById('c'), {type: 'bar', data: {labels: d.map(x => x.name), datasets: [{data: d.map(x => x.kg), backgroundColor: '#7bc47f'}]},
+  options: {maintainAspectRatio: false, indexAxis: 'y', plugins: {legend: {display: false}}}});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block body %}
+<nav class="eco-top sticky-top d-flex align-items-center gap-2">
+  <button class="btn btn-outline-eco d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#side" aria-label="Menu"><i class="bi bi-list"></i></button>
+  <a class="brand me-auto" href="{{ url_for(session.role + '.dashboard') }}"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt="">ECOWASTE</a>
+  <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+  <button class="lang-btn" data-lang="ta" onclick="setLang('ta')">தமிழ்</button>
+  <a class="btn btn-outline-eco position-relative" href="{{ url_for('auth.notifications') }}" title="Notifications"><i class="bi bi-bell"></i>
+    {% if unread %}<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ unread }}</span>{% endif %}</a>
+  <div class="dropdown">
+    <button class="btn btn-eco dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-person-circle"></i> <span class="d-none d-sm-inline">{{ session.name }}</span></button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><span class="dropdown-item-text small text-muted text-capitalize">{{ session.role }}</span></li>
+      <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}" data-i18n="profile">Profile</a></li>
+      <li><form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="dropdown-item" data-i18n="logout">Logout</button></form></li>
+    </ul>
+  </div>
+</nav>
+<div class="layout">
+  <aside class="offcanvas-lg offcanvas-start eco-side" id="side" tabindex="-1">
+    <div class="offcanvas-header d-lg-none"><b>Menu</b><button class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#side"></button></div>
+    <div class="offcanvas-body flex-column p-3">
+      <div class="small text-uppercase text-muted fw-semibold px-2 mb-2" style="letter-spacing:.06em">{{ session.role }} menu</div>
+      <ul class="nav flex-column gap-1 w-100">
+      {% for ep, icon, key, label in NAV %}
+        <li><a class="nav-link {{ 'active' if request.endpoint == ep else '' }}" href="{{ url_for(ep) }}"><i class="bi {{ icon }}"></i><span data-i18n="{{ key }}">{{ label }}</span></a></li>
+      {% endfor %}
+      </ul>
+    </div>
+  </aside>
+  <main>
+    {% include "_flash.html" %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

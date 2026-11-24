@@ -1,0 +1,28 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import stat, badge with context %}
+{% block title %}Collector Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h4 class="mb-0">Welcome, {{ prof.name }}</h4>
+  <form method="post" action="{{ url_for('collector.availability') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn {{ 'btn-eco' if prof.available else 'btn-outline-secondary' }}"><i class="bi bi-toggle-{{ 'on' if prof.available else 'off' }}"></i> {{ 'Available for pickups' if prof.available else 'Unavailable' }}</button></form>
+</div>
+<div class="row g-3 mb-3">
+  {{ stat('bi-inbox', 'Open requests', s.open) }}
+  {{ stat('bi-truck', 'Assigned pickups', s.active|int) }}
+  {{ stat('bi-box-arrow-right', 'Delivered to recyclers', (s.delivered + s.completed)|int) }}
+  {{ stat('bi-star-fill', 'Rating', (rating.avg ~ ' (' ~ rating.n ~ ')') if rating.n else 'No ratings', 'warn') }}
+</div>
+<div class="row g-3">
+  <div class="col-lg-4"><div class="eco-card"><h6 class="fw-bold">Profile</h6>
+    <div class="small">{{ prof.email }}<br>{{ prof.phone }}<br>Vehicle: {{ prof.vehicle }}<br>Area: {{ prof.area }}</div>
+    <hr><h6 class="fw-bold">Earnings summary</h6>
+    <div class="d-flex justify-content-between small"><span>Sales received</span><b class="text-success">{{ t.cr|inr }}</b></div>
+    <div class="d-flex justify-content-between small"><span>Paid to households</span><b class="text-danger">{{ t.db|inr }}</b></div>
+    <div class="d-flex justify-content-between"><span>Net</span><b>{{ (t.cr - t.db)|inr }}</b></div></div></div>
+  <div class="col-lg-8"><div class="eco-card"><div class="d-flex justify-content-between"><h6 class="fw-bold">Recent activity</h6><a class="small" href="{{ url_for('collector.pickups') }}">My pickups</a></div>
+    <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>#</th><th>Household</th><th>Materials</th><th>Date</th><th>Status</th></tr></thead><tbody>
+    {% for r in recent %}<tr><td>{{ r.id }}</td><td>{{ r.household }}</td><td>{{ r.materials|truncate(36) }}</td><td>{{ r.pickup_date|fdate }}</td><td>{{ badge(r.status) }}</td></tr>
+    {% else %}<tr><td colspan="5"><div class="empty-state"><i class="bi bi-inbox"></i><div>No activity yet. <a href="{{ url_for('collector.requests') }}">Browse requests</a>.</div></div></td></tr>{% endfor %}</tbody></table></div></div></div>
+</div>
+{% endblock %}

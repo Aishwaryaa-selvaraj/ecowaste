@@ -1,0 +1,55 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import badge, stepper, items_table with context %}
+{% block title %}My Pickups{% endblock %}
+{% block content %}
+<div class="page-head"><h4>My Pickups</h4><p>Update each request as you complete a stage. The household and recycler see every change.</p></div>
+<div class="row g-3">
+  {% for r in rows %}
+  <div class="col-xl-6"><div class="eco-card">
+    <div class="d-flex justify-content-between"><b>#{{ r.id }} · {{ r.household }}</b>{{ badge(r.status) }}</div>
+    {{ stepper(r.status) }}
+    <div class="small"><i class="bi bi-telephone"></i> <a href="tel:{{ r.phone }}">{{ r.phone }}</a></div>
+    <div class="small"><i class="bi bi-calendar-event"></i> {{ r.pickup_date|fdate }} at {{ r.pickup_time|ftime }}</div>
+    <div class="small"><i class="bi bi-geo-alt"></i> <b>{{ r.address }}</b></div>
+    <a class="btn btn-outline-eco btn-sm my-2" target="_blank" rel="noopener"
+      href="https://www.google.com/maps/search/?api=1&query={% if r.lat and r.lng %}{{ r.lat }},{{ r.lng }}{% else %}{{ r.address|urlencode }}{% endif %}"><i class="bi bi-signpost-2"></i> Open in maps</a>
+    <form method="post" action="{{ url_for('collector.advance', rid=r.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if r.status == 'assigned' %}
+      {{ items_table(r['items'], r) }}
+      <button class="btn btn-eco w-100 mt-3"><i class="bi bi-play-circle"></i> Start collection</button>
+    {% elif r.status == 'in_progress' %}
+      <div class="table-responsive"><table class="table table-sm items-table weigh mb-0">
+        <thead><tr><th>Material</th><th class="text-end">Requested</th><th style="width:150px">Actual weight</th><th class="text-end">Price/kg</th><th class="text-end">Value</th></tr></thead>
+        <tbody>{% for i in r['items'] %}
+          <tr><td>{{ i.name }}</td><td class="text-end">{{ '%g'|format(i.est_weight) }} kg</td>
+            <td><div class="input-group input-group-sm"><input class="form-control w" type="number" name="w_{{ i.category_id }}" min="0" max="2000" step="0.01" inputmode="decimal"
+              value="{{ '%g'|format(i.est_weight) }}" data-p="{{ i.cur_price or 0 }}" required aria-label="Actual kg of {{ i.name }}"><span class="input-group-text">kg</span></div></td>
+            <td class="text-end">₹{{ '%g'|format(i.cur_price or 0) }}</td><td class="text-end fw-semibold v">₹0.00</td></tr>{% endfor %}</tbody>
+        <tfoot><tr class="fw-bold"><td>Total</td><td class="text-end">{{ '%g'|format(r.est_weight) }} kg</td><td class="tk">0 kg</td><td></td><td class="text-end tv">₹0.00</td></tr></tfoot>
+      </table></div>
+      <p class="small text-muted mt-2 mb-2">Values use the current price per kg. Enter 0 for a material you did not collect.</p>
+      <button class="btn btn-eco w-100"><i class="bi bi-check2-square"></i> Mark waste collected</button>
+    {% elif r.status == 'collected' %}
+      {{ items_table(r['items'], r) }}
+      <label class="form-label small fw-semibold mt-3 mb-1" for="rec{{ r.id }}">Deliver to recycler</label>
+      <select class="form-select mb-2" id="rec{{ r.id }}" name="recycler_id" required>
+        <option value="">Choose recycler...</option>{% for y in recyclers %}<option value="{{ y.id }}">{{ y.company }} - {{ y.address }}</option>{% endfor %}</select>
+      <button class="btn btn-eco w-100"><i class="bi bi-box-arrow-right"></i> Mark delivered to recycler</button>
+    {% endif %}
+    </form>
+  </div></div>
+  {% else %}<div class="col-12"><div class="eco-card empty-state"><i class="bi bi-truck"></i><div>No active pickups. <a href="{{ url_for('collector.requests') }}">Browse open requests</a>.</div></div></div>{% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+// Live per-material value and totals while weighing (the server recalculates from the price table when saving).
+document.querySelectorAll('table.weigh').forEach(t => {
+  const calc = () => { let kg = 0, tot = 0;
+    t.querySelectorAll('input.w').forEach(i => { const w = Math.max(parseFloat(i.value) || 0, 0), v = Math.round(w * parseFloat(i.dataset.p) * 100) / 100;
+      i.closest('tr').querySelector('.v').textContent = inr(v); kg += w; tot += v; });
+    t.querySelector('.tk').textContent = (Math.round(kg * 100) / 100) + ' kg'; t.querySelector('.tv').textContent = inr(Math.round(tot * 100) / 100); };
+  t.querySelectorAll('input.w').forEach(i => i.oninput = calc); calc();
+});
+</script>
+{% endblock %}

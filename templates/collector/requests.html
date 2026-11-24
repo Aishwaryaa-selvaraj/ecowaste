@@ -1,0 +1,20 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import badge, items_table with context %}
+{% block title %}Pickup Requests{% endblock %}
+{% block content %}
+<div class="page-head"><h4>Open Pickup Requests</h4><p>Each request is one household with all of its materials.</p></div>
+<div class="row g-3">
+  {% for r in rows %}
+  <div class="col-lg-6 col-xxl-4"><div class="eco-card">
+    <div class="d-flex justify-content-between"><b>#{{ r.id }} · {{ r.household }}</b>{{ badge('pending') }}</div>
+    <div class="small mt-2"><i class="bi bi-calendar-event"></i> {{ r.pickup_date|fdate }} at {{ r.pickup_time|ftime }}</div>
+    <div class="small mb-2"><i class="bi bi-geo-alt"></i> {{ r.address }}</div>
+    {{ items_table(r['items'], r) }}
+    <div class="d-flex gap-2 mt-3">
+      {% for act, cls, label in [('accept','btn-eco','Accept'),('reject','btn-outline-danger','Reject')] %}
+      <form method="post" action="{{ url_for('collector.respond', rid=r.id, action=act) }}" class="flex-fill"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn {{ cls }} w-100">{{ label }}</button></form>{% endfor %}
+    </div></div></div>
+  {% else %}<div class="col-12"><div class="eco-card empty-state"><i class="bi bi-inbox"></i><div>No open requests right now.</div></div></div>{% endfor %}
+</div>
+{% endblock %}

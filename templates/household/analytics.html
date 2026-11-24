@@ -1,0 +1,25 @@
+{% extends "dash.html" %}
+{% block title %}Monthly Analytics{% endblock %}
+{% block content %}
+<h4 class="mb-3">Monthly Analytics</h4>
+{% if rows %}
+<div class="eco-card mb-3"><div class="chart-box"><canvas id="c"></canvas></div></div>
+<div class="eco-card"><div class="table-responsive"><table class="table table-hover mb-0">
+  <thead><tr><th>Month</th><th class="text-end">Total waste (kg)</th><th class="text-end">Recyclable (kg)</th><th class="text-end">Earnings</th><th class="text-end">Collections</th></tr></thead><tbody>
+  {% for r in rows %}<tr><td>{{ r.m }}</td><td class="text-end">{{ '%.1f'|format(r.total_kg) }}</td><td class="text-end">{{ '%.1f'|format(r.recyclable_kg) }}</td><td class="text-end">{{ r.value|inr }}</td><td class="text-end">{{ r.pickups }}</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% else %}<div class="eco-card text-center py-5 text-muted">No collections recorded yet. Reports appear after your first pickup.</div>{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if rows %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const d = {{ rows|reverse|list|tojson }};
+new Chart(document.getElementById('c'), {type: 'bar', data: {labels: d.map(x => x.m), datasets: [
+  {label: 'Total waste (kg)', data: d.map(x => x.total_kg), backgroundColor: '#7bc47f'},
+  {label: 'Recyclable (kg)', data: d.map(x => x.recyclable_kg), backgroundColor: '#1f6b3a'},
+  {label: 'Earnings (₹)', data: d.map(x => x.value), type: 'line', borderColor: '#f4a300', backgroundColor: '#f4a300', yAxisID: 'y1'}]},
+  options: {maintainAspectRatio: false, scales: {y1: {position: 'right', grid: {drawOnChartArea: false}}}}});
+</script>
+{% endif %}
+{% endblock %}

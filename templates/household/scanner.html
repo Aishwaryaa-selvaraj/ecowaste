@@ -1,0 +1,88 @@
+{% extends "dash.html" %}
+{% block title %}Waste Scanner{% endblock %}
+{% block content %}
+<h4 class="mb-1">AI Waste Scanner</h4>
+<p class="text-muted">Upload a photo and the in-browser image model suggests the material. The photo never leaves your device. Suggestions are approximate - always confirm or correct them below.</p>
+<div class="row g-3">
+  <div class="col-lg-6"><div class="eco-card">
+    <div class="drop mb-3"><i class="bi bi-cloud-arrow-up fs-1 text-success"></i>
+      <input class="form-control mt-2" type="file" id="file" accept="image/png,image/jpeg,image/webp" capture="environment">
+      <small class="text-muted">JPG, PNG or WebP, up to 5 MB</small></div>
+    <img id="preview" class="rounded mb-3 d-none" alt="Preview" style="max-height:260px">
+    <button class="btn btn-eco w-100" id="scan" disabled><i class="bi bi-search"></i> Scan waste</button>
+    <div id="status" class="small text-muted mt-2"></div>
+  </div></div>
+  <div class="col-lg-6"><div class="eco-card">
+    <h6 class="fw-bold">Result</h6>
+    <div id="result" class="mb-3 text-muted">Scan a photo or choose manually below.</div>
+    <hr><h6 class="fw-bold">Manual classification</h6>
+    <select class="form-select mb-2" id="manual"><option value="">Choose material...</option>
+      {% for c in cats %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    <div id="manualOut" class="small"></div>
+  </div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const cats = {{ cats|tojson }};
+const byName = n => cats.find(c => c.name === n);
+const RULES = [
+  [/water bottle|pop bottle|soda|bottle cap|plastic bag|packet|lotion|sunscreen|pill bottle|cup/, 'Plastic (PET)'],
+  [/jug|bucket|detergent|pitcher|tub|barrel|bin|crate|container/, 'Plastic (HDPE)'],
+  [/beer bottle|wine bottle|goblet|vase|jar|beaker|glass/, 'Glass'],
+  [/can opener|tin|soda can|beer can/, 'Aluminium'],
+  [/pot|wok|frying pan|pan|spatula|ladle|padlock|nail|hammer|screw|wrench|chain|iron/, 'Iron & Steel'],
+  [/carton|box|crate|envelope|cardboard|packing/, 'Cardboard'],
+  [/book|newspaper|paper|notebook|binder|menu|comic|magazine|toilet tissue|towel/, 'Paper'],
+  [/cable|wire|coil|spiral/, 'Copper'],
+  [/laptop|notebook computer|cellular|phone|keyboard|mouse|remote|monitor|television|printer|modem|charger|iPod|hard disc|joystick|speaker|radio|calculator/, 'E-waste'],
+  [/jersey|jean|sweatshirt|shirt|sock|cardigan|sweater|dress|gown|cloth|kimono|sari|sarong|poncho|towel|diaper/, 'Textiles'],
+  [/banana|orange|lemon|apple|pineapple|broccoli|cabbage|cucumber|zucchini|pomegranate|fig|mushroom|corn|vegetable|pizza|bread|bagel|plate|meat|egg|potato|carrot|strawberry|jackfruit|custard/, 'Organic / Food Waste']
+];
+function classify(preds) {
+  for (const p of preds) {
+    const label = p.className.toLowerCase();
+    for (const [re, name] of RULES) if (re.test(label)) return {cat: byName(name), pred: p};
+  }
+  return {cat: byName('Mixed Non-recyclable'), pred: preds[0], weak: true};
+}
+const typeBadge = t => ({recyclable: 'success', biodegradable: 'warning', 'non-recyclable': 'secondary'}[t] || 'secondary');
+function show(el, cat, extra) {
+  el.innerHTML = cat ? `<span class="badge bg-${typeBadge(cat.type)} text-capitalize">${cat.type}</span>
+    <b class="ms-1">${cat.name}</b>${extra || ''}<div class="mt-2"><a class="btn btn-sm btn-accent" href="{{ url_for('household.book') }}?cat=${cat.id}">Book pickup</a>
+    <a class="btn btn-sm btn-outline-eco" href="{{ url_for('household.estimator') }}">Estimate value</a></div>` : '';
+}
+const load = src => new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+async function model() {
+  if (!window._m) {
+    await load('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js');
+    await load('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js');
+    window._m = await mobilenet.load({version: 2, alpha: 1.0});
+  }
+  return window._m;
+}
+const file = document.getElementById('file'), img = document.getElementById('preview'), scan = document.getElementById('scan'), st = document.getElementById('status');
+file.onchange = () => {
+  const f = file.files[0]; scan.disabled = true;
+  if (!f) return;
+  if (!/^image\/(png|jpeg|webp)$/.test(f.type) || f.size > 5 * 1024 * 1024) { st.textContent = 'Please choose a JPG/PNG/WebP image under 5 MB.'; file.value = ''; return; }
+  img.src = URL.createObjectURL(f); img.classList.remove('d-none'); scan.disabled = false; st.textContent = '';
+};
+scan.onclick = async () => {
+  scan.disabled = true; st.textContent = 'Loading image model (first scan needs internet)...';
+  try {
+    const m = await model(); st.textContent = 'Analysing...';
+    const preds = await m.classify(img, 5);
+    const r = classify(preds);
+    const top = preds.slice(0, 3).map(p => `${p.className.split(',')[0]} (${Math.round(p.probability * 100)}%)`).join(', ');
+    show(document.getElementById('result'), r.cat, `<div class="small text-muted mt-1">Model saw: ${top}</div>` +
+      (r.weak ? '<div class="small text-danger">Not sure about this one - please classify manually.</div>' : ''));
+    st.textContent = '';
+  } catch (e) {
+    st.textContent = 'The scanner could not load (no internet?). Use manual classification instead.';
+  }
+  scan.disabled = false;
+};
+document.getElementById('manual').onchange = e => show(document.getElementById('manualOut'), cats.find(c => c.id == e.target.value));
+</script>
+{% endblock %}

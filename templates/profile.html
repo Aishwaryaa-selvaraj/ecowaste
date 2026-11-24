@@ -1,0 +1,24 @@
+{% extends "dash.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<h4 class="mb-3">My Profile</h4>
+<div class="eco-card" style="max-width:640px">
+  <form method="post" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Full name</label><input class="form-control" name="name" value="{{ user.name }}" required></div>
+      <div class="col-md-6"><label class="form-label">Email (cannot be changed)</label><input class="form-control" value="{{ user.email }}" disabled></div>
+      <div class="col-md-6"><label class="form-label">Phone</label><input class="form-control" name="phone" value="{{ user.phone }}" required></div>
+      <div class="col-md-6"><label class="form-label">Role</label><input class="form-control text-capitalize" value="{{ session.role }}" disabled></div>
+      <div class="col-md-{{ 12 if not labels[1] else 6 }}"><label class="form-label">{{ labels[0] }}</label><input class="form-control" name="field1" value="{{ extra.f1 }}" required></div>
+      {% if labels[1] %}<div class="col-md-6"><label class="form-label">{{ labels[1] }}</label><input class="form-control" name="field2" value="{{ extra.f2 }}" required></div>{% endif %}
+    </div>
+    <hr><h6>Change password (optional)</h6>
+    <div class="row g-3">
+      <div class="col-md-6"><input class="form-control" type="password" name="current_password" placeholder="Current password" autocomplete="current-password"></div>
+      <div class="col-md-6"><input class="form-control" type="password" name="new_password" placeholder="New password" autocomplete="new-password"></div>
+    </div>
+    <button class="btn btn-eco mt-3">Save changes</button>
+  </form>
+</div>
+{% endblock %}

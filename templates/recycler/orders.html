@@ -1,0 +1,17 @@
+{% extends "dash.html" %}
+{% from "_macros.html" import badge with context %}
+{% block title %}My Orders{% endblock %}
+{% block content %}
+<h4 class="mb-3">My Purchase Orders</h4>
+<div class="eco-card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>#</th><th>Material</th><th>Collector</th><th class="text-end">Qty (kg)</th><th class="text-end">Offer ₹/kg</th><th class="text-end">Total</th><th>Status</th><th></th></tr></thead><tbody>
+  {% for o in rows %}
+  <tr><td>{{ o.id }}</td><td>{{ o.category }}<div class="small text-muted">{{ o.created_at|fdt }}</div></td>
+    <td>{{ o.collector }}<div class="small"><a href="tel:{{ o.phone }}">{{ o.phone }}</a> · <a href="mailto:{{ o.email }}">{{ o.email }}</a></div></td>
+    <td class="text-end">{{ '%g'|format(o.quantity_kg) }}</td><td class="text-end">{{ '%g'|format(o.offer_price_per_kg) }}</td><td class="text-end fw-semibold">{{ o.total|inr }}</td>
+    <td>{{ badge(o.status) }}</td>
+    <td>{% if o.status == 'requested' %}<form method="post" action="{{ url_for('recycler.cancel', oid=o.id) }}" onsubmit="return confirm('Cancel this order?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn btn-sm btn-outline-danger">Cancel</button></form>{% endif %}</td></tr>
+  {% else %}<tr><td colspan="8" class="text-center text-muted py-4">No orders yet. <a href="{{ url_for('recycler.market') }}">Browse the marketplace</a>.</td></tr>{% endfor %}
+  </tbody></table></div></div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Set new password{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:440px">
+  <div class="eco-card">
+    <h4 class="fw-bold mb-3 text-center">Choose a new password</h4>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="form-label">New password</label>
+      <input class="form-control mb-3" type="password" name="password" autocomplete="new-password" required>
+      <label class="form-label">Confirm password</label>
+      <input class="form-control mb-3" type="password" name="confirm" autocomplete="new-password" required>
+      <button class="btn btn-eco w-100">Update password</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
